@@ -1,1 +1,0 @@
-var fs=require("fs");var path="D:/Desktop/brain/_hub/outputs/creater/rant-wall/js/app.js";var c=fs.readFileSync(path,"utf8");console.log("read",c.length);
