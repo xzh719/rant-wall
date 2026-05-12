@@ -126,7 +126,18 @@
   async function _renderCards(filterBy) {
     currentFilter = filterBy;
 
-    var rants = await RantStore.getAllRants();
+    var rants;
+    try {
+      rants = await RantStore.getAllRants();
+    } catch (err) {
+      console.error('[Feed] 加载吐槽失败:', err);
+      feedEl.innerHTML = '';
+      hideSkeleton();
+      emptyEl.innerHTML = '<p class="empty-icon">⚠️</p><p>加载失败，请检查网络后刷新页面</p><button class="btn btn-secondary" onclick="location.reload()">🔄 重试</button>';
+      emptyEl.style.display = 'block';
+      return;
+    }
+
     if (filterBy !== 'all') {
       rants = rants.filter(function (r) { return r.emotion === filterBy; });
     }
@@ -135,6 +146,7 @@
     hideSkeleton();
 
     if (rants.length === 0) {
+      emptyEl.innerHTML = '<p class="empty-icon">📭</p><p>还没有吐槽，快来发布第一条吧！</p><a href="post.html" class="btn btn-primary">✏️ 去吐槽</a>';
       emptyEl.style.display = 'block';
       return;
     }
@@ -307,9 +319,13 @@
   }
 
   async function updateAdminUI() {
-    var isAdmin = RantStore.isAdmin();
-    if (adminBar) adminBar.style.display = isAdmin ? 'flex' : 'none';
-    if (adminTrigger) adminTrigger.textContent = isAdmin ? '退出管理' : '管理';
+    try {
+      var isAdmin = RantStore.isAdmin();
+      if (adminBar) adminBar.style.display = isAdmin ? 'flex' : 'none';
+      if (adminTrigger) adminTrigger.textContent = isAdmin ? '退出管理' : '管理';
+    } catch (e) {
+      console.error('[Feed] updateAdminUI error:', e);
+    }
     await renderFeed(currentFilter);
   }
 
@@ -586,8 +602,16 @@
   async function init() {
     loadVotes();
     loadReactions();
-    await updateAdminUI();
     showSkeleton();
+    try {
+      await updateAdminUI();
+    } catch (e) {
+      console.error('[Feed] init error:', e);
+      hideSkeleton();
+      emptyEl.innerHTML = '<p class="empty-icon">⚠️</p><p>初始化失败，请刷新页面重试</p><button class="btn btn-secondary" onclick="location.reload()">🔄 刷新</button>';
+      emptyEl.style.display = 'block';
+      return;
+    }
     setTimeout(async function () {
       await renderFeed();
     }, 500);

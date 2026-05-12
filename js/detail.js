@@ -417,7 +417,18 @@
 
   // ========== 启动 ==========
   async function start() {
-    rant = await RantStore.getRantById(rantId);
+    try {
+      rant = await RantStore.getRantById(rantId);
+    } catch (err) {
+      console.error('[Detail] 加载吐槽失败:', err);
+      rantDetail.innerHTML = '\
+        <div class="empty-state">\
+          <p class="empty-icon">⚠️</p>\
+          <p>加载失败，请检查网络后刷新页面</p>\
+          <button class="btn btn-secondary" onclick="location.reload()" style="margin-top:16px;">🔄 重试</button>\
+        </div>';
+      return;
+    }
 
     if (!rant) {
       rantDetail.innerHTML = '\

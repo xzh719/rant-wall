@@ -1,13 +1,39 @@
 /**
  * app.js — 吐槽墙全局数据管理 & 路由模块
- * 基于 Bmob 云数据库（替换原 localStorage 方案）
+ * Bmob 云数据库 + localStorage 降级双模式
+ * - Bmob SDK 可用 → 云数据库，多用户共享
+ * - Bmob 不可用 → localStorage 本地存储，单机可用
  */
 
 const RantStore = (() => {
   const NICKNAME_KEY = 'rant_wall_nickname';
+  const RANTS_KEY = 'rant_wall_rants';
 
-  // ========== Bmob 初始化 ==========
-  Bmob.initialize('3c28d089ecd589d71812d703080f101c', 'fa41e0c40097dc5890376251a0c021b1');
+  // ========== Bmob 初始化（安全） ==========
+  var bmobReady = false;
+  (function _initBmob() {
+    try {
+      if (typeof Bmob === 'undefined') {
+        console.warn('[RantStore] Bmob SDK 未加载，启用本地存储模式');
+        return;
+      }
+      Bmob.initialize('3c28d089ecd589d71812d703080f101c', 'fa41e0c40097dc5890376251a0c021b1');
+      bmobReady = true;
+      console.log('[RantStore] Bmob 已连接');
+    } catch (e) {
+      console.warn('[RantStore] Bmob 初始化失败: ' + e.message + '，启用本地存储模式');
+    }
+  })();
+
+  // ========== localStorage 降级方案 ==========
+  function _local_getAll() {
+    try { return JSON.parse(localStorage.getItem(RANTS_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+
+  function _local_saveAll(rants) {
+    localStorage.setItem(RANTS_KEY, JSON.stringify(rants));
+  }
 
   // ========== Bmob 记录 → 本地格式 ==========
   function _fromBmob(record) {
@@ -32,53 +58,102 @@ const RantStore = (() => {
   // ========== 吐槽 CRUD ==========
 
   async function getAllRants() {
-    var query = Bmob.Query('Rant');
-    query.order('-createdAt');
-    var res = await query.find();
-    return res.map(function (r) { return _fromBmob(r); });
+    if (bmobReady) {
+      var query = Bmob.Query('Rant');
+      query.order('-createdAt');
+      var res = await query.find();
+      return res.map(function (r) { return _fromBmob(r); });
+    }
+    // localStorage 降级
+    var rants = _local_getAll();
+    return rants.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
   }
 
   async function getRantById(id) {
-    var query = Bmob.Query('Rant');
-    var record = await query.get(id);
-    return record ? _fromBmob(record) : null;
+    if (bmobReady) {
+      var query = Bmob.Query('Rant');
+      var record = await query.get(id);
+      return record ? _fromBmob(record) : null;
+    }
+    var rants = _local_getAll();
+    var found = rants.filter(function (r) { return r.id === id; });
+    return found.length > 0 ? found[0] : null;
   }
 
   async function addRant(data) {
-    var query = Bmob.Query('Rant');
-    query.set('title', data.title);
-    query.set('content', data.content);
-    query.set('emotion', data.emotion);
-    query.set('author', data.isAnonymous ? '某不愿透露姓名的网友' : (data.author || '匿名用户'));
-    query.set('isAnonymous', !!data.isAnonymous);
-    query.set('authorToken', getAuthorToken());
-    query.set('image', data.image || '');
-    query.set('likes', 0);
-    query.set('dislikes', 0);
-    query.set('comments', []);
-    query.set('reactions', {});
-    var res = await query.save();
-    return _fromBmob(res);
+    var authorName = data.isAnonymous ? '某不愿透露姓名的网友' : (data.author || '匿名用户');
+    if (bmobReady) {
+      var query = Bmob.Query('Rant');
+      query.set('title', data.title);
+      query.set('content', data.content);
+      query.set('emotion', data.emotion);
+      query.set('author', authorName);
+      query.set('isAnonymous', !!data.isAnonymous);
+      query.set('authorToken', getAuthorToken());
+      query.set('image', data.image || '');
+      query.set('likes', 0);
+      query.set('dislikes', 0);
+      query.set('comments', []);
+      query.set('reactions', {});
+      var res = await query.save();
+      return _fromBmob(res);
+    }
+    // localStorage 降级
+    var rants = _local_getAll();
+    var newRant = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
+      emotion: data.emotion,
+      title: data.title,
+      content: data.content,
+      author: authorName,
+      isAnonymous: !!data.isAnonymous,
+      authorToken: getAuthorToken(),
+      image: data.image || null,
+      likes: 0,
+      dislikes: 0,
+      comments: [],
+      reactions: {},
+      createdAt: Date.now()
+    };
+    rants.unshift(newRant);
+    _local_saveAll(rants);
+    return newRant;
   }
 
   async function updateRant(id, patch) {
-    var rant = await getRantById(id);
-    if (!rant) return null;
-
-    var query = Bmob.Query('Rant');
+    if (bmobReady) {
+      var rant = await getRantById(id);
+      if (!rant) return null;
+      var query = Bmob.Query('Rant');
+      Object.keys(patch).forEach(function (key) {
+        query.set(key, patch[key]);
+      });
+      await query.update(id);
+      return await getRantById(id);
+    }
+    // localStorage 降级
+    var rants = _local_getAll();
+    var idx = -1;
+    for (var i = 0; i < rants.length; i++) {
+      if (rants[i].id === id) { idx = i; break; }
+    }
+    if (idx === -1) return null;
     Object.keys(patch).forEach(function (key) {
-      query.set(key, patch[key]);
+      rants[idx][key] = patch[key];
     });
-    await query.update(id);
-
-    // 返回合并后的数据
-    var updated = await getRantById(id);
-    return updated;
+    _local_saveAll(rants);
+    return rants[idx];
   }
 
   async function deleteRant(id) {
-    var query = Bmob.Query('Rant');
-    await query.destroy(id);
+    if (bmobReady) {
+      var query = Bmob.Query('Rant');
+      await query.destroy(id);
+      return;
+    }
+    var rants = _local_getAll();
+    rants = rants.filter(function (r) { return r.id !== id; });
+    _local_saveAll(rants);
   }
 
   // ========== 评论 CRUD ==========
@@ -103,13 +178,16 @@ const RantStore = (() => {
       createdAt: Date.now()
     };
 
-    var comments = rant.comments || [];
-    comments.push(comment);
-
-    var query = Bmob.Query('Rant');
-    query.set('comments', comments);
-    await query.update(rantId);
-
+    if (bmobReady) {
+      var comments = rant.comments || [];
+      comments.push(comment);
+      var query = Bmob.Query('Rant');
+      query.set('comments', comments);
+      await query.update(rantId);
+      return comment;
+    }
+    // localStorage 降级
+    await updateRant(rantId, { comments: (rant.comments || []).concat([comment]) });
     return comment;
   }
 
@@ -121,9 +199,13 @@ const RantStore = (() => {
       return c.id !== commentId;
     });
 
-    var query = Bmob.Query('Rant');
-    query.set('comments', comments);
-    await query.update(rantId);
+    if (bmobReady) {
+      var query = Bmob.Query('Rant');
+      query.set('comments', comments);
+      await query.update(rantId);
+      return true;
+    }
+    await updateRant(rantId, { comments: comments });
     return true;
   }
 
