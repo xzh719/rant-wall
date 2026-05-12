@@ -5,6 +5,13 @@
 (function () {
   'use strict';
 
+  window.addEventListener('error', function (e) {
+    var rd = document.getElementById('rantDetail');
+    if (rd) {
+      rd.innerHTML = '<div class="empty-state"><p class="empty-icon">⚠️</p><p>' + (e.message || '页面出错') + '</p><button class="btn btn-secondary" onclick="location.reload()" style="margin-top:16px">🔄 重试</button></div>';
+    }
+  });
+
   var rantDetail = document.getElementById('rantDetail');
   var commentList = document.getElementById('commentList');
   var commentEmpty = document.getElementById('commentEmpty');

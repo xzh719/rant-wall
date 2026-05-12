@@ -5,6 +5,13 @@
 (function () {
   'use strict';
 
+  window.addEventListener('error', function (e) {
+    var el = document.querySelector('.site-main');
+    if (el) {
+      el.innerHTML = '<div style="text-align:center;padding:48px 16px"><p style="font-size:48px">⚠️</p><p>' + (e.message || '页面出错') + '</p><button class="btn btn-secondary" onclick="location.reload()" style="margin-top:16px">🔄 重试</button></div>';
+    }
+  });
+
   var form = document.getElementById('rantForm');
   var emotionSelector = document.getElementById('emotionSelector');
   var titleInput = document.getElementById('rantTitle');

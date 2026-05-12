@@ -5,6 +5,17 @@
 (function () {
   'use strict';
 
+  // 全局兜底：未捕获异常不白屏
+  window.addEventListener('error', function (e) {
+    var emptyEl = document.getElementById('emptyState');
+    if (emptyEl) {
+      emptyEl.innerHTML = '<p class="empty-icon">⚠️</p><p>页面出错：' + (e.message || '未知错误') + '</p><button class="btn btn-secondary" onclick="location.reload()">🔄 重试</button>';
+      emptyEl.style.display = 'block';
+    }
+    var sk = document.getElementById('skeletonFeed');
+    if (sk) sk.style.display = 'none';
+  });
+
   var feedEl = document.getElementById('rantFeed');
   var emptyEl = document.getElementById('emptyState');
   var filterBar = document.querySelector('.filter-bar');
@@ -613,57 +624,63 @@
     });
   }
 
-  // ========== 下拉刷新（移动端） ==========
-  var pullStartY = 0;
-  var pullDist = 0;
-  var pulling = false;
-  var pullHint = null;
+  // ========== 下拉刷新（移动端，仅触屏设备） ==========
+  if ('ontouchstart' in window) {
+    var pullStartY = 0;
+    var pullDist = 0;
+    var pulling = false;
+    var pullHint = null;
 
-  function createPullHint() {
-    pullHint = document.createElement('div');
-    pullHint.className = 'pull-hint';
-    pullHint.textContent = '↓ 下拉刷新';
-    if (feedEl.parentNode) {
-      feedEl.parentNode.insertBefore(pullHint, feedEl);
+    function createPullHint() {
+      try {
+        pullHint = document.createElement('div');
+        pullHint.className = 'pull-hint';
+        pullHint.textContent = '↓ 下拉刷新';
+        if (feedEl.parentNode) {
+          feedEl.parentNode.insertBefore(pullHint, feedEl);
+        }
+      } catch (e) {}
     }
+
+    try {
+      document.addEventListener('touchstart', function (e) {
+        if (window.scrollY > 5) return;
+        pullStartY = e.touches[0].clientY;
+        pulling = true;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', function (e) {
+        if (!pulling) return;
+        pullDist = e.touches[0].clientY - pullStartY;
+        if (pullDist > 20 && pullHint) {
+          pullHint.style.display = 'block';
+          pullHint.style.transform = 'translateY(' + Math.min(pullDist - 20, 30) + 'px)';
+          pullHint.textContent = pullDist > 70 ? '↑ 释放刷新' : '↓ 下拉刷新';
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchend', async function () {
+        if (!pulling || pullDist < 70) {
+          if (pullHint) pullHint.style.display = 'none';
+          pulling = false;
+          pullDist = 0;
+          return;
+        }
+        if (pullHint) {
+          pullHint.textContent = '🔄 刷新中...';
+          pullHint.style.display = 'block';
+        }
+        try { await renderFeed(currentFilter); } catch (e) {}
+        if (pullHint) {
+          pullHint.style.display = 'none';
+        }
+        pulling = false;
+        pullDist = 0;
+      });
+    } catch (e) {}
+
+    createPullHint();
   }
-
-  document.addEventListener('touchstart', function (e) {
-    if (window.scrollY > 5) return;
-    pullStartY = e.touches[0].clientY;
-    pulling = true;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', function (e) {
-    if (!pulling) return;
-    pullDist = e.touches[0].clientY - pullStartY;
-    if (pullDist > 20 && pullHint) {
-      pullHint.style.display = 'block';
-      pullHint.style.transform = 'translateY(' + Math.min(pullDist - 20, 30) + 'px)';
-      pullHint.textContent = pullDist > 70 ? '↑ 释放刷新' : '↓ 下拉刷新';
-    }
-  }, { passive: true });
-
-  document.addEventListener('touchend', async function () {
-    if (!pulling || pullDist < 70) {
-      if (pullHint) pullHint.style.display = 'none';
-      pulling = false;
-      pullDist = 0;
-      return;
-    }
-    if (pullHint) {
-      pullHint.textContent = '🔄 刷新中...';
-      pullHint.style.display = 'block';
-    }
-    await renderFeed(currentFilter);
-    if (pullHint) {
-      pullHint.style.display = 'none';
-    }
-    pulling = false;
-    pullDist = 0;
-  });
-
-  createPullHint();
 
   // ========== 启动 ==========
   async function init() {
