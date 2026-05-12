@@ -224,15 +224,25 @@
         author = RantStore.getNickname() || '匿名用户';
       }
 
-      var newComment = await RantStore.addComment(rantId, {
-        content: content,
-        author: author,
-        isAnonymous: isAnonymous
-      });
+      try {
+        var newComment = await RantStore.addComment(rantId, {
+          content: content,
+          author: author,
+          isAnonymous: isAnonymous
+        });
 
-      commentContent.value = '';
-      Toast.show('评论发表成功！', 'success');
-      await renderComments(newComment ? newComment.id : null);
+        if (!newComment) {
+          Toast.show('评论失败：吐槽不存在或已被删除', 'error');
+          return;
+        }
+
+        commentContent.value = '';
+        Toast.show('评论发表成功！', 'success');
+        await renderComments(newComment ? newComment.id : null);
+      } catch (err) {
+        console.error('[Detail] 评论失败:', err);
+        Toast.show('评论失败，请稍后重试', 'error');
+      }
     });
   }
 
