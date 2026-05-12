@@ -65,8 +65,9 @@ const RantStore = (() => {
         var res = await query.find();
         return res.map(function (r) { return _fromBmob(r); });
       } catch (e) {
-        console.warn('[getAllRants] Bmob 请求失败: ' + e.message + '，降级');
-        bmobReady = false;
+        console.warn('[getAllRants] Bmob 请求失败: ' + e.message + '（不降级，表可能为空）');
+        // 不设 bmobReady=false：可能是表不存在(404)或空表，发布时自动建表
+        return [];
       }
     }
     var rants = _local_getAll();
@@ -80,8 +81,8 @@ const RantStore = (() => {
         var record = await query.get(id);
         return record ? _fromBmob(record) : null;
       } catch (e) {
-        console.warn('[getRantById] Bmob 请求失败: ' + e.message + '，降级');
-        bmobReady = false;
+        console.warn('[getRantById] Bmob 请求失败: ' + e.message + '');
+        return null;
       }
     }
     var rants = _local_getAll();
