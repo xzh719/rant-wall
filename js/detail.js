@@ -176,10 +176,14 @@
   // ========== 渲染评论区 ==========
   async function renderComments(newCommentId) {
     rant = await RantStore.getRantById(rantId);
+    if (!rant) {
+      console.warn('[Detail] renderComments: rant not found for id', rantId);
+      return;
+    }
     var comments = rant.comments || [];
     commentList.innerHTML = '';
 
-    if (comments.length === 0) {
+    if (!Array.isArray(comments) || comments.length === 0) {
       commentEmpty.style.display = 'block';
       return;
     }
@@ -237,6 +241,7 @@
           author: author,
           isAnonymous: isAnonymous
         });
+        console.log('[Detail] addComment result:', newComment);
 
         if (!newComment) {
           Toast.show('评论失败：吐槽不存在或已被删除', 'error');
@@ -245,7 +250,10 @@
 
         commentContent.value = '';
         Toast.show('评论发表成功！', 'success');
-        await renderComments(newComment ? newComment.id : null);
+        // 强制刷新 rant 数据再渲染评论区
+        rant = await RantStore.getRantById(rantId);
+        console.log('[Detail] rant after comment:', rant ? rant.comments : null);
+        await renderComments(newComment.id);
       } catch (err) {
         console.error('[Detail] 评论失败:', err);
         Toast.show('评论失败，请稍后重试', 'error');
