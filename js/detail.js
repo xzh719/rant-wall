@@ -15,7 +15,7 @@
   // 从 URL 获取 rant ID
   var params = new URLSearchParams(window.location.search);
   var rantId = params.get('id');
-  var rant = RantStore.getRantById(rantId);
+  var rant = null;
 
   // 投票记录
   var userVotes = {};
@@ -31,17 +31,6 @@
 
   function saveVotes() {
     localStorage.setItem('rant_wall_votes', JSON.stringify(userVotes));
-  }
-
-  // ========== 吐槽不存在 ==========
-  if (!rant) {
-    rantDetail.innerHTML = '\
-      <div class="empty-state">\
-        <p class="empty-icon">🔍</p>\
-        <p>吐槽不存在或已被删除</p>\
-        <a href="index.html" class="btn btn-primary" style="margin-top:16px;">← 返回首页</a>\
-      </div>';
-    return;
   }
 
   // ========== 时间格式化 ==========
@@ -66,16 +55,16 @@
   }
 
   // ========== 渲染吐槽详情 ==========
-  function renderRantDetail() {
+  async function renderRantDetail() {
+    // 刷新最新数据
+    rant = await RantStore.getRantById(rantId);
+
     var tag = RantStore.getEmotionByValue(rant.emotion);
     var emoji = tag ? tag.emoji : '';
     var label = tag ? tag.label : '吐槽';
     var tagColor = tag ? tag.color : '#6b7280';
     var authorName = rant.isAnonymous ? '某不愿透露姓名的网友' : rant.author;
     var vote = userVotes[rant.id];
-
-    // 刷新最新数据
-    rant = RantStore.getRantById(rantId);
 
     // 图片模糊背景
     if (rant.image) {
@@ -121,21 +110,20 @@
     }
   }
 
-  function handleVote(action, likeBtn, dislikeBtn) {
-    rant = RantStore.getRantById(rantId);
+  async function handleVote(action, likeBtn, dislikeBtn) {
+    rant = await RantStore.getRantById(rantId);
     var currentVote = userVotes[rantId];
 
     if (action === 'like') {
       if (currentVote === 'like') {
-        RantStore.updateRant(rantId, { likes: Math.max(0, rant.likes - 1) });
+        await RantStore.updateRant(rantId, { likes: Math.max(0, rant.likes - 1) });
         userVotes[rantId] = null;
       } else {
-        RantStore.updateRant(rantId, { likes: rant.likes + 1 });
+        await RantStore.updateRant(rantId, { likes: rant.likes + 1 });
         if (currentVote === 'dislike') {
-          RantStore.updateRant(rantId, { dislikes: Math.max(0, rant.dislikes - 1) });
+          await RantStore.updateRant(rantId, { dislikes: Math.max(0, rant.dislikes - 1) });
         }
         userVotes[rantId] = 'like';
-        // 点赞心跳动画
         if (likeBtn) {
           likeBtn.classList.add('animate-heartbeat');
           likeBtn.addEventListener('animationend', function h() {
@@ -146,15 +134,14 @@
       }
     } else {
       if (currentVote === 'dislike') {
-        RantStore.updateRant(rantId, { dislikes: Math.max(0, rant.dislikes - 1) });
+        await RantStore.updateRant(rantId, { dislikes: Math.max(0, rant.dislikes - 1) });
         userVotes[rantId] = null;
       } else {
-        RantStore.updateRant(rantId, { dislikes: rant.dislikes + 1 });
+        await RantStore.updateRant(rantId, { dislikes: rant.dislikes + 1 });
         if (currentVote === 'like') {
-          RantStore.updateRant(rantId, { likes: Math.max(0, rant.likes - 1) });
+          await RantStore.updateRant(rantId, { likes: Math.max(0, rant.likes - 1) });
         }
         userVotes[rantId] = 'dislike';
-        // 踩抖动动画
         if (dislikeBtn) {
           dislikeBtn.classList.add('animate-shake');
           dislikeBtn.addEventListener('animationend', function h() {
@@ -166,8 +153,7 @@
     }
 
     saveVotes();
-    // 只更新数字和 class，不重建整个详情卡片
-    rant = RantStore.getRantById(rantId);
+    rant = await RantStore.getRantById(rantId);
     var likeCountEl = document.getElementById('likeCount');
     var dislikeCountEl = document.getElementById('dislikeCount');
     if (likeCountEl) likeCountEl.textContent = rant.likes;
@@ -181,8 +167,8 @@
   }
 
   // ========== 渲染评论区 ==========
-  function renderComments(newCommentId) {
-    rant = RantStore.getRantById(rantId);
+  async function renderComments(newCommentId) {
+    rant = await RantStore.getRantById(rantId);
     var comments = rant.comments || [];
     commentList.innerHTML = '';
 
@@ -192,7 +178,6 @@
     }
 
     commentEmpty.style.display = 'none';
-    // 按时间正序（最早的在前）
     comments.sort(function (a, b) {
       return new Date(a.createdAt) - new Date(b.createdAt);
     });
@@ -206,7 +191,6 @@
       var item = document.createElement('div');
       item.className = 'comment-item';
       item.setAttribute('data-cmt-id', cmt.id);
-      // 新评论滑入动画
       if (newCommentId && cmt.id === newCommentId) {
         item.classList.add('comment-item--new');
       }
@@ -222,7 +206,7 @@
 
   // ========== 提交评论 ==========
   if (commentForm) {
-    commentForm.addEventListener('submit', function (e) {
+    commentForm.addEventListener('submit', async function (e) {
       e.preventDefault();
       var content = commentContent.value.trim();
       if (content.length < 1) {
@@ -240,7 +224,7 @@
         author = RantStore.getNickname() || '匿名用户';
       }
 
-      var newComment = RantStore.addComment(rantId, {
+      var newComment = await RantStore.addComment(rantId, {
         content: content,
         author: author,
         isAnonymous: isAnonymous
@@ -248,7 +232,7 @@
 
       commentContent.value = '';
       Toast.show('评论发表成功！', 'success');
-      renderComments(newComment ? newComment.id : null);
+      await renderComments(newComment ? newComment.id : null);
     });
   }
 
@@ -327,13 +311,12 @@
     });
   }
 
-  function updateAdminUI() {
+  async function updateAdminUI() {
     var isAdmin = RantStore.isAdmin();
     if (adminBar) adminBar.style.display = isAdmin ? 'flex' : 'none';
     if (adminTrigger) adminTrigger.textContent = isAdmin ? '退出管理' : '管理';
-    // 重新渲染以显示/隐藏删除按钮
-    renderRantDetail();
-    renderComments();
+    await renderRantDetail();
+    await renderComments();
   }
 
   // 确认弹窗
@@ -341,17 +324,16 @@
     confirmCancelBtn.addEventListener('click', closeConfirmModal);
   }
   if (confirmOkBtn) {
-    confirmOkBtn.addEventListener('click', function () {
+    confirmOkBtn.addEventListener('click', async function () {
       if (pendingDeleteId) {
         if (pendingDeleteType === 'rant') {
-          RantStore.deleteRant(pendingDeleteId);
+          await RantStore.deleteRant(pendingDeleteId);
           Toast.show('吐槽已删除', 'success');
-          // 返回首页
           setTimeout(function () { window.location.href = 'index.html'; }, 300);
         } else if (pendingDeleteType === 'comment') {
-          RantStore.deleteComment(rantId, pendingDeleteId);
+          await RantStore.deleteComment(rantId, pendingDeleteId);
           Toast.show('评论已删除', 'success');
-          renderComments();
+          await renderComments();
         }
       }
       closeConfirmModal();
@@ -383,9 +365,11 @@
 
   // 重写 renderRantDetail 加入删除按钮
   var _origRenderRantDetail = renderRantDetail;
-  renderRantDetail = function () {
-    _origRenderRantDetail();
-    var canDelete = RantStore.isAdmin() || RantStore.isAuthor(rantId);
+  renderRantDetail = async function () {
+    await _origRenderRantDetail();
+    var isAdmin = RantStore.isAdmin();
+    var isAuthorCheck = await RantStore.isAuthor(rantId);
+    var canDelete = isAdmin || isAuthorCheck;
     if (canDelete && rant) {
       var footerEl = document.querySelector('.rant-detail__footer');
       if (footerEl) {
@@ -401,13 +385,12 @@
   };
 
   // 重写 renderComments 加入评论删除按钮（管理员模式）
-  var _origRenderComments = renderComments;
-  renderComments = function (newCommentId) {
-    _origRenderComments(newCommentId);
+  var _origRenderComments2 = renderComments;
+  renderComments = async function (newCommentId) {
+    await _origRenderComments2(newCommentId);
     if (RantStore.isAdmin()) {
       var items = commentList.querySelectorAll('.comment-item');
       items.forEach(function (item) {
-        // 从 DOM 找 comment id — 通过 data 属性
         var cmtHeader = item.querySelector('.comment-item__header');
         if (cmtHeader && !item.querySelector('.comment-delete-btn')) {
           var delBtn = document.createElement('button');
@@ -433,7 +416,23 @@
   };
 
   // ========== 启动 ==========
-  updateAdminUI();
-  renderRantDetail();
-  renderComments();
+  async function start() {
+    rant = await RantStore.getRantById(rantId);
+
+    if (!rant) {
+      rantDetail.innerHTML = '\
+        <div class="empty-state">\
+          <p class="empty-icon">🔍</p>\
+          <p>吐槽不存在或已被删除</p>\
+          <a href="index.html" class="btn btn-primary" style="margin-top:16px;">← 返回首页</a>\
+        </div>';
+      return;
+    }
+
+    await updateAdminUI();
+    await renderRantDetail();
+    await renderComments();
+  }
+
+  start();
 })();

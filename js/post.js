@@ -221,7 +221,7 @@
   }
 
   // ========== 表单提交 ==========
-  form.addEventListener('submit', function (e) {
+  form.addEventListener('submit', async function (e) {
     e.preventDefault();
     clearErrors();
 
@@ -281,20 +281,28 @@
     var originalText = submitBtn.textContent;
     submitBtn.innerHTML = '<span class="btn-spinner"></span> 发布中...';
 
-    // 写入数据
-    RantStore.addRant({
-      emotion: selectedEmotion,
-      title: title,
-      content: content,
-      author: author,
-      isAnonymous: isAnonymous,
-      image: uploadedImage
-    });
+    // 写入数据（异步 Bmob）
+    try {
+      await RantStore.addRant({
+        emotion: selectedEmotion,
+        title: title,
+        content: content,
+        author: author,
+        isAnonymous: isAnonymous,
+        image: uploadedImage
+      });
 
-    // 延迟跳转，让用户看到反馈
-    setTimeout(function () {
-      window.location.href = 'index.html';
-    }, 400);
+      // 延迟跳转
+      setTimeout(function () {
+        window.location.href = 'index.html';
+      }, 400);
+    } catch (err) {
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('btn--loading');
+      submitBtn.textContent = originalText;
+      Toast.show('发布失败，请稍后重试', 'error');
+      console.error('Bmob addRant error:', err);
+    }
   });
 
   // ========== 错误提示（改用 Toast） ==========

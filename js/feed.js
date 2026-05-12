@@ -100,30 +100,33 @@
   }
 
   // ========== 渲染吐槽流（含筛选过渡） ==========
-  function renderFeed(filterBy) {
+  async function renderFeed(filterBy) {
     if (isTransitioning) return;
     filterBy = filterBy || currentFilter;
 
-    // 如果筛选条件变化，先淡出
     if (filterBy !== currentFilter && feedEl.children.length > 0) {
       isTransitioning = true;
       feedEl.classList.add('rant-feed--fading');
 
-      setTimeout(function () {
-        _renderCards(filterBy);
-        feedEl.classList.remove('rant-feed--fading');
-        isTransitioning = false;
-      }, 200);
+      await new Promise(function (resolve) {
+        setTimeout(function () {
+          _renderCards(filterBy).then(function () {
+            feedEl.classList.remove('rant-feed--fading');
+            isTransitioning = false;
+            resolve();
+          });
+        }, 200);
+      });
       return;
     }
 
-    _renderCards(filterBy);
+    await _renderCards(filterBy);
   }
 
-  function _renderCards(filterBy) {
+  async function _renderCards(filterBy) {
     currentFilter = filterBy;
 
-    var rants = RantStore.getAllRants();
+    var rants = await RantStore.getAllRants();
     if (filterBy !== 'all') {
       rants = rants.filter(function (r) { return r.emotion === filterBy; });
     }
@@ -143,27 +146,27 @@
   }
 
   // ========== 事件委托：投票交互（含动画） ==========
-  feedEl.addEventListener('click', function (e) {
+  feedEl.addEventListener('click', async function (e) {
     var btn = e.target.closest('[data-action]');
     if (!btn) return;
     e.stopPropagation();
 
     var action = btn.dataset.action;
     var rantId = btn.dataset.id;
-    var rant = RantStore.getRantById(rantId);
+    var rant = await RantStore.getRantById(rantId);
     if (!rant) return;
 
     var currentVote = userVotes[rantId];
 
     if (action === 'like') {
       if (currentVote === 'like') {
-        RantStore.updateRant(rantId, { likes: Math.max(0, rant.likes - 1) });
+        await RantStore.updateRant(rantId, { likes: Math.max(0, rant.likes - 1) });
         userVotes[rantId] = null;
         btn.classList.remove('liked');
       } else {
-        RantStore.updateRant(rantId, { likes: rant.likes + 1 });
+        await RantStore.updateRant(rantId, { likes: rant.likes + 1 });
         if (currentVote === 'dislike') {
-          RantStore.updateRant(rantId, { dislikes: Math.max(0, rant.dislikes - 1) });
+          await RantStore.updateRant(rantId, { dislikes: Math.max(0, rant.dislikes - 1) });
           var dislikeBtn = btn.parentElement.querySelector('.rant-action--dislike');
           if (dislikeBtn) dislikeBtn.classList.remove('disliked');
         }
@@ -173,13 +176,13 @@
       }
     } else if (action === 'dislike') {
       if (currentVote === 'dislike') {
-        RantStore.updateRant(rantId, { dislikes: Math.max(0, rant.dislikes - 1) });
+        await RantStore.updateRant(rantId, { dislikes: Math.max(0, rant.dislikes - 1) });
         userVotes[rantId] = null;
         btn.classList.remove('disliked');
       } else {
-        RantStore.updateRant(rantId, { dislikes: rant.dislikes + 1 });
+        await RantStore.updateRant(rantId, { dislikes: rant.dislikes + 1 });
         if (currentVote === 'like') {
-          RantStore.updateRant(rantId, { likes: Math.max(0, rant.likes - 1) });
+          await RantStore.updateRant(rantId, { likes: Math.max(0, rant.likes - 1) });
           var likeBtn = btn.parentElement.querySelector('.rant-action--like');
           if (likeBtn) likeBtn.classList.remove('liked');
         }
@@ -190,8 +193,7 @@
     }
 
     saveVotes();
-    // 只更新数字，不重建 DOM
-    var updatedRant = RantStore.getRantById(rantId);
+    var updatedRant = await RantStore.getRantById(rantId);
     if (updatedRant) {
       var cardBtns = feedEl.querySelector('[data-id="' + rantId + '"] .rant-card__actions');
       if (cardBtns) {
@@ -304,11 +306,11 @@
     });
   }
 
-  function updateAdminUI() {
+  async function updateAdminUI() {
     var isAdmin = RantStore.isAdmin();
     if (adminBar) adminBar.style.display = isAdmin ? 'flex' : 'none';
     if (adminTrigger) adminTrigger.textContent = isAdmin ? '退出管理' : '管理';
-    renderFeed(currentFilter);
+    await renderFeed(currentFilter);
   }
 
   // 确认弹窗
@@ -316,22 +318,23 @@
     confirmCancelBtn.addEventListener('click', closeConfirmModal);
   }
   if (confirmOkBtn) {
-    confirmOkBtn.addEventListener('click', function () {
+    confirmOkBtn.addEventListener('click', async function () {
       if (pendingDeleteId && pendingDeleteType === 'rant') {
-        var deleteId = pendingDeleteId; // 捕获 ID，closeConfirmModal 会清空
+        var deleteId = pendingDeleteId;
         var card = feedEl.querySelector('[data-id="' + deleteId + '"]');
         closeConfirmModal();
         if (card) {
           card.classList.add('rant-card--deleting');
           card.addEventListener('animationend', function handler() {
             card.removeEventListener('animationend', handler);
-            RantStore.deleteRant(deleteId);
-            renderFeed(currentFilter);
-            Toast.show('吐槽已删除', 'success');
+            RantStore.deleteRant(deleteId).then(function () {
+              renderFeed(currentFilter);
+              Toast.show('吐槽已删除', 'success');
+            });
           });
         } else {
-          RantStore.deleteRant(deleteId);
-          renderFeed(currentFilter);
+          await RantStore.deleteRant(deleteId);
+          await renderFeed(currentFilter);
           Toast.show('吐槽已删除', 'success');
         }
       } else {
@@ -580,14 +583,13 @@
   };
 
   // ========== 启动 ==========
-  function init() {
+  async function init() {
     loadVotes();
     loadReactions();
-    updateAdminUI();
+    await updateAdminUI();
     showSkeleton();
-    // 延迟渲染，让骨架屏可见
-    setTimeout(function () {
-      renderFeed();
+    setTimeout(async function () {
+      await renderFeed();
     }, 500);
   }
 
