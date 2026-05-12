@@ -79,8 +79,8 @@
     }
 
     // 大小验证
-    if (file.size > 2 * 1024 * 1024) {
-      Toast.show('图片大小不能超过 2MB', 'error');
+    if (file.size > 1 * 1024 * 1024) {
+      Toast.show('图片大小不能超过 1MB', 'error');
       return;
     }
 
@@ -101,7 +101,7 @@
     var img = new Image();
     img.onload = function () {
       var canvas = document.createElement('canvas');
-      var maxWidth = 800;
+      var maxWidth = 400;
       var width = img.width;
       var height = img.height;
 
@@ -115,12 +115,21 @@
       var ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
-      // 压缩为 JPEG，质量 0.7
-      var compressed = canvas.toDataURL('image/jpeg', 0.7);
+      // 压缩为 JPEG，质量 0.5
+      var compressed = canvas.toDataURL('image/jpeg', 0.5);
 
-      // 如果压缩后仍大，降质量
-      if (compressed.length > 1.5 * 1024 * 1024) {
-        compressed = canvas.toDataURL('image/jpeg', 0.4);
+      // 超过 100KB 继续降质量
+      if (compressed.length > 100 * 1024) {
+        compressed = canvas.toDataURL('image/jpeg', 0.25);
+      }
+
+      // 仍然太大，拒绝
+      if (compressed.length > 200 * 1024) {
+        Toast.show('图片过大，请选择更小的图片', 'error');
+        uploadedImage = null;
+        imagePreview.style.display = 'none';
+        imageUploadPlaceholder.style.display = 'flex';
+        return;
       }
 
       callback(compressed);

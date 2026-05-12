@@ -152,9 +152,10 @@
     }
 
     emptyEl.style.display = 'none';
-    rants.forEach(function (rant, i) {
-      feedEl.appendChild(createRantCard(rant, i));
-    });
+    var cards = await Promise.all(rants.map(function (rant, i) {
+      return createRantCard(rant, i);
+    }));
+    cards.forEach(function (card) { feedEl.appendChild(card); });
   }
 
   // ========== 事件委托：投票交互（含动画） ==========
@@ -384,11 +385,12 @@
     openConfirmModal(rantId, title);
   };
 
-  // 更新卡片渲染以包含删除按钮
+  // 更新卡片渲染以包含删除按钮（异步检查作者身份）
   var _origCreateRantCard = createRantCard;
-  createRantCard = function (rant, index) {
+  createRantCard = async function (rant, index) {
     var card = _origCreateRantCard(rant, index);
-    var canDelete = RantStore.isAdmin() || RantStore.isAuthor(rant.id);
+    var isAuthor = rant.id ? await RantStore.isAuthor(rant.id) : false;
+    var canDelete = RantStore.isAdmin() || isAuthor;
     if (canDelete && rant.id) {
       var footerEl = card.querySelector('.rant-card__footer');
       if (footerEl) {
@@ -597,6 +599,69 @@
     renderReactionBadges(card, rant.id);
     return card;
   };
+
+  // ========== 刷新按钮 ==========
+  var refreshBtn = document.getElementById('refreshBtn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async function () {
+      refreshBtn.classList.add('refresh-btn--spinning');
+      await renderFeed(currentFilter);
+      setTimeout(function () { refreshBtn.classList.remove('refresh-btn--spinning'); }, 600);
+      Toast.show('已刷新', 'info');
+    });
+  }
+
+  // ========== 下拉刷新（移动端） ==========
+  var pullStartY = 0;
+  var pullDist = 0;
+  var pulling = false;
+  var pullHint = null;
+
+  function createPullHint() {
+    pullHint = document.createElement('div');
+    pullHint.className = 'pull-hint';
+    pullHint.textContent = '↓ 下拉刷新';
+    if (feedEl.parentNode) {
+      feedEl.parentNode.insertBefore(pullHint, feedEl);
+    }
+  }
+
+  document.addEventListener('touchstart', function (e) {
+    if (window.scrollY > 5) return;
+    pullStartY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function (e) {
+    if (!pulling) return;
+    pullDist = e.touches[0].clientY - pullStartY;
+    if (pullDist > 20 && pullHint) {
+      pullHint.style.display = 'block';
+      pullHint.style.transform = 'translateY(' + Math.min(pullDist - 20, 30) + 'px)';
+      pullHint.textContent = pullDist > 70 ? '↑ 释放刷新' : '↓ 下拉刷新';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async function () {
+    if (!pulling || pullDist < 70) {
+      if (pullHint) pullHint.style.display = 'none';
+      pulling = false;
+      pullDist = 0;
+      return;
+    }
+    if (pullHint) {
+      pullHint.textContent = '🔄 刷新中...';
+      pullHint.style.display = 'block';
+    }
+    await renderFeed(currentFilter);
+    if (pullHint) {
+      pullHint.style.display = 'none';
+    }
+    pulling = false;
+    pullDist = 0;
+  });
+
+  createPullHint();
 
   // ========== 启动 ==========
   async function init() {

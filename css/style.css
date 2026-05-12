@@ -78,6 +78,12 @@ img { max-width: 100%; display: block; }
 .filter-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .filter-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
+.refresh-btn { padding: var(--space-xs) var(--space-sm); border:1px solid var(--color-border); border-radius:var(--radius-full,9999px); background:transparent; color:var(--color-text-secondary); font-size:var(--text-sm); cursor:pointer; transition:all var(--transition-fast); line-height:1; }
+.refresh-btn:hover { border-color:var(--color-primary); color:var(--color-primary); }
+.refresh-btn--spinning { animation:spin 0.6s linear; pointer-events:none; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.pull-hint { text-align:center; padding:12px; color:var(--color-text-muted); font-size:13px; display:none; -webkit-user-select:none; user-select:none; }
+
 .rant-feed { display: flex; flex-direction: column; gap: var(--space-md); }
 .rant-card { background: var(--color-surface); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); cursor: pointer; transition: box-shadow var(--transition-base), transform var(--transition-base); }
 .rant-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
