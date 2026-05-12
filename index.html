@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>吐槽墙 — 吐吐更健康</title>
+  <link rel="stylesheet" href="css/design-tokens.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ===== 头部导航 ===== -->
+  <header class="site-header">
+    <div class="header-inner container">
+      <a href="index.html" class="logo">吐槽墙</a>
+      <nav class="main-nav">
+        <a href="index.html" class="nav-link active">首页</a>
+        <a href="post.html" class="nav-link nav-link--primary">发布</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 管理模式提示条 -->
+  <div class="admin-bar" id="adminBar" style="display:none;">
+    <span>🛡️ 管理模式 — 可删除任意吐槽和评论</span>
+    <button class="btn btn--sm btn-secondary" id="adminExitBtn">退出管理模式</button>
+  </div>
+
+  <!-- ===== 主体内容区 ===== -->
+  <main class="site-main container">
+    <!-- 装饰语 -->
+    <div class="site-motto">
+      <span class="site-motto__text">有些话，说出来就轻了</span>
+      <span class="site-motto__divider">·</span>
+      <span class="site-motto__text">有些事，翻篇了就淡了</span>
+      <span class="site-motto__divider">·</span>
+      <span class="site-motto__text">有些情绪，被看见就好了</span>
+    </div>
+
+    <!-- 筛选栏 -->
+    <section class="filter-bar">
+      <button class="filter-btn active" data-emotion="all">🔥 全部</button>
+      <button class="filter-btn" data-emotion="angry">😡 愤怒</button>
+      <button class="filter-btn" data-emotion="speechless">🙄 无语</button>
+      <button class="filter-btn" data-emotion="funny">😂 搞笑</button>
+      <button class="filter-btn" data-emotion="embarrassed">😱 社死</button>
+      <button class="filter-btn" data-emotion="work">💼 职场</button>
+      <button class="filter-btn" data-emotion="life">🏠 生活</button>
+      <button class="filter-btn" data-emotion="love">💔 情感</button>
+      <button class="filter-btn" data-emotion="rant">💬 吐槽</button>
+    </section>
+
+    <!-- 骨架屏 -->
+    <div class="rant-feed" id="skeletonFeed">
+      <div class="skeleton-card"><div class="skeleton-line skeleton-line--title"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--medium"></div><div class="skeleton-line skeleton-line--short"></div></div>
+      <div class="skeleton-card"><div class="skeleton-line skeleton-line--title"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--medium"></div><div class="skeleton-line skeleton-line--short"></div></div>
+      <div class="skeleton-card"><div class="skeleton-line skeleton-line--title"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--medium"></div><div class="skeleton-line skeleton-line--short"></div></div>
+    </div>
+
+    <!-- 吐槽卡片流 -->
+    <section class="rant-feed" id="rantFeed">
+      <!-- JS 动态渲染 -->
+    </section>
+
+    <!-- 空状态 -->
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <p class="empty-icon">📭</p>
+      <p>还没有吐槽，快来发布第一条吧！</p>
+      <a href="post.html" class="btn btn-primary">✏️ 去吐槽</a>
+    </div>
+  </main>
+
+  <!-- ===== 页脚 ===== -->
+  <footer class="site-footer">
+    <span class="footer-text">吐槽墙</span>
+    <span class="footer-dot">·</span>
+    <a href="javascript:void(0)" class="footer-link" id="adminTrigger">管理</a>
+  </footer>
+
+  <!-- Toast 容器 -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- 删除确认弹窗 -->
+  <div class="modal-overlay" id="confirmModal" style="display:none;">
+    <div class="modal-dialog">
+      <p class="modal-message" id="confirmMessage">确定要删除这条吐槽吗？此操作不可撤销。</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="confirmCancelBtn">取消</button>
+        <button class="btn btn-danger" id="confirmOkBtn">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 回到顶部 -->
+  <button class="scroll-to-top" id="scrollToTopBtn" aria-label="回到顶部">⬆</button>
+
+  <!-- 浮动发布按钮 FAB -->
+  <a href="post.html" class="fab" id="fabBtn" aria-label="发布吐槽">✏️</a>
+
+  <!-- 操作 Sheet（移动端长按） -->
+  <div class="action-sheet-overlay" id="actionSheetOverlay" style="display:none;">
+    <div class="action-sheet">
+      <button class="action-sheet__item" data-sheet-action="detail">📋 查看详情</button>
+      <button class="action-sheet__item" data-sheet-action="share">🔗 分享链接</button>
+      <button class="action-sheet__item action-sheet__item--danger" data-sheet-action="report">🚩 举报</button>
+      <div class="action-sheet__cancel">
+        <button class="action-sheet__item" data-sheet-action="cancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data/mock.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/feed.js" defer></script>
+</body>
+</html>

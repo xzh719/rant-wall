@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发布吐槽 — 吐槽墙</title>
+  <link rel="stylesheet" href="css/design-tokens.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ===== 头部导航 ===== -->
+  <header class="site-header">
+    <div class="header-inner container">
+      <a href="index.html" class="logo">吐槽墙</a>
+      <nav class="main-nav">
+        <a href="index.html" class="nav-link">首页</a>
+        <a href="post.html" class="nav-link nav-link--primary active">发布</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== 主体内容区 ===== -->
+  <main class="site-main container">
+    <section class="post-form-section">
+      <h2 class="section-title">✏️ 发布新吐槽</h2>
+      <p class="section-subtitle">把不开心留在这里，轻松地离开</p>
+
+      <form class="rant-form" id="rantForm">
+        <!-- 情绪选择 -->
+        <div class="form-group">
+          <label class="form-label">情绪标签 <span class="required">*</span></label>
+          <div class="emotion-selector" id="emotionSelector">
+            <!-- JS 动态生成 -->
+          </div>
+        </div>
+
+        <!-- 标题 -->
+        <div class="form-group">
+          <label for="rantTitle" class="form-label">标题 <span class="required">*</span></label>
+          <input type="text" id="rantTitle" class="form-input" placeholder="一句话概括你的吐槽（1-30字）"
+                 maxlength="30" required>
+          <span class="form-hint"><span id="titleCount">0</span>/30</span>
+        </div>
+
+        <!-- 正文 -->
+        <div class="form-group">
+          <label for="rantContent" class="form-label">正文 <span class="required">*</span></label>
+          <textarea id="rantContent" class="form-textarea" rows="6"
+                    placeholder="尽情倾诉吧...（10-500字）" maxlength="500" required></textarea>
+          <span class="form-hint"><span id="contentCount">0</span>/500</span>
+        </div>
+
+        <!-- 图片上传 -->
+        <div class="form-group">
+          <label class="form-label">图片（可选）</label>
+          <div class="image-upload-area" id="imageUploadArea">
+            <input type="file" id="imageFileInput" class="image-upload-input" accept="image/jpeg,image/png,image/gif,image/webp">
+            <div class="image-upload-placeholder" id="imageUploadPlaceholder">
+              <span class="image-upload-icon">📷</span>
+              <span>点击或拖拽上传图片</span>
+              <span class="image-upload-hint">支持 JPG/PNG/GIF/WebP，≤ 2MB</span>
+            </div>
+            <div class="image-preview" id="imagePreview" style="display:none;">
+              <img id="imagePreviewImg" src="" alt="预览">
+              <button type="button" class="image-remove-btn" id="imageRemoveBtn" aria-label="移除图片">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 匿名开关 + 昵称 -->
+        <div class="form-group form-group--inline">
+          <label class="form-label">发布方式</label>
+          <div class="toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="anonymousToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label" id="toggleLabelText">匿名发布</span>
+          </div>
+        </div>
+
+        <div class="form-group" id="nicknameGroup" style="display:none;">
+          <label for="nicknameInput" class="form-label">你的昵称</label>
+          <input type="text" id="nicknameInput" class="form-input" placeholder="取个昵称吧（1-10字）" maxlength="10">
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="history.back()">取消</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">📨 发布吐槽</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <!-- ===== 页脚 ===== -->
+  <footer class="site-footer">
+    <span class="footer-text">吐槽墙</span>
+    <span class="footer-dot">·</span>
+    <a href="javascript:void(0)" class="footer-link" id="adminTrigger">管理</a>
+  </footer>
+
+  <!-- 自定义情绪创建弹窗 -->
+  <div class="modal-overlay" id="customEmotionModal" style="display:none;">
+    <div class="modal-dialog">
+      <h3 style="margin:0 0 16px;">🎨 创建自定义情绪</h3>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">标签名（≤4字）</label>
+        <input type="text" id="customEmotionLabel" class="form-input" placeholder="如：加班" maxlength="4">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Emoji</label>
+        <input type="text" id="customEmotionEmoji" class="form-input" placeholder="如：😤" maxlength="2">
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">颜色</label>
+        <div class="color-picker-row" id="colorPickerRow">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="customEmotionCancelBtn">取消</button>
+        <button class="btn btn-primary" id="customEmotionSaveBtn">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 容器 -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="data/mock.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/post.js" defer></script>
+</body>
+</html>

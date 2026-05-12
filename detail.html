@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>吐槽详情 — 吐槽墙</title>
+  <link rel="stylesheet" href="css/design-tokens.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ===== 头部导航 ===== -->
+  <header class="site-header">
+    <div class="header-inner container">
+      <a href="index.html" class="logo">吐槽墙</a>
+      <nav class="main-nav">
+        <a href="index.html" class="nav-link">首页</a>
+        <a href="post.html" class="nav-link nav-link--primary">发布</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== 主体内容区 ===== -->
+  <main class="site-main container">
+    <a href="index.html" class="back-link">← 返回首页</a>
+    <p class="page-whisper">听完，就翻篇吧</p>
+
+    <!-- 吐槽详情卡片 -->
+    <article class="rant-detail" id="rantDetail">
+      <!-- JS 动态渲染 -->
+    </article>
+
+    <!-- 评论区 -->
+    <section class="comment-section">
+      <h3 class="section-title">💬 评论区</h3>
+
+      <div class="comment-list" id="commentList">
+        <!-- JS 动态渲染 -->
+      </div>
+
+      <div class="empty-state empty-state--small" id="commentEmpty" style="display:none;">
+        <p>暂无评论，来抢沙发吧！</p>
+      </div>
+
+      <div class="comment-form-wrapper">
+        <h4>发表评论</h4>
+        <form class="comment-form" id="commentForm">
+          <textarea id="commentContent" class="form-textarea" rows="3"
+                    placeholder="写下你的看法...（1-200字）" maxlength="200" required></textarea>
+          <div class="comment-form-row">
+            <label class="toggle-switch toggle-switch--small">
+              <input type="checkbox" id="commentAnonymousToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">匿名评论</span>
+            <button type="submit" class="btn btn-primary btn--sm">📨 提交评论</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== 页脚 ===== -->
+  <footer class="site-footer">
+    <span class="footer-text">吐槽墙</span>
+    <span class="footer-dot">·</span>
+    <a href="javascript:void(0)" class="footer-link" id="adminTrigger">管理</a>
+  </footer>
+
+  <!-- 管理模式提示条 -->
+  <div class="admin-bar" id="adminBar" style="display:none;">
+    <span>🛡️ 管理模式 — 可删除任意吐槽和评论</span>
+    <button class="btn btn--sm btn-secondary" id="adminExitBtn">退出管理模式</button>
+  </div>
+
+  <!-- Toast 容器 -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- 删除确认弹窗 -->
+  <div class="modal-overlay" id="confirmModal" style="display:none;">
+    <div class="modal-dialog">
+      <p class="modal-message" id="confirmMessage">确定要删除这条吐槽吗？此操作不可撤销。</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="confirmCancelBtn">取消</button>
+        <button class="btn btn-danger" id="confirmOkBtn">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" style="display:none;">
+    <button class="lightbox__close" id="lightboxClose" aria-label="关闭">✕</button>
+    <img class="lightbox__img" id="lightboxImg" src="" alt="全屏预览">
+  </div>
+
+  <script src="data/mock.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/detail.js" defer></script>
+</body>
+</html>
