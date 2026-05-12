@@ -594,8 +594,8 @@
 
   // --- 增强卡片渲染：添加表情计数 ---
   var _origCreateCard2 = createRantCard;
-  createRantCard = function (rant, index) {
-    var card = _origCreateCard2(rant, index);
+  createRantCard = async function (rant, index) {
+    var card = await _origCreateCard2(rant, index);
     renderReactionBadges(card, rant.id);
     return card;
   };
