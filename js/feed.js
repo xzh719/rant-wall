@@ -385,28 +385,8 @@
     openConfirmModal(rantId, title);
   };
 
-  // 更新卡片渲染以包含删除按钮（异步检查作者身份）
+  // 保存原始同步 createRantCard
   var _origCreateRantCard = createRantCard;
-  createRantCard = async function (rant, index) {
-    var card = _origCreateRantCard(rant, index);
-    var isAuthor = rant.id ? await RantStore.isAuthor(rant.id) : false;
-    var canDelete = RantStore.isAdmin() || isAuthor;
-    if (canDelete && rant.id) {
-      var footerEl = card.querySelector('.rant-card__footer');
-      if (footerEl) {
-        var delBtn = document.createElement('button');
-        delBtn.className = 'rant-delete-btn';
-        delBtn.setAttribute('aria-label', '删除吐槽');
-        delBtn.textContent = '🗑️';
-        delBtn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          window._feedDelete(rant.id, rant.title);
-        });
-        footerEl.insertBefore(delBtn, footerEl.firstChild);
-      }
-    }
-    return card;
-  };
 
   // =========================================
   // R2-01 新增交互
@@ -592,10 +572,32 @@
     });
   }
 
-  // --- 增强卡片渲染：添加表情计数 ---
-  var _origCreateCard2 = createRantCard;
+  // --- 最终卡片渲染：删除按钮 + 表情计数（单次 async 包装） ---
   createRantCard = async function (rant, index) {
-    var card = await _origCreateCard2(rant, index);
+    var card = _origCreateRantCard(rant, index);
+
+    // 删除按钮（异步检查作者身份）
+    if (rant.id) {
+      var isAuthor = false;
+      try { isAuthor = await RantStore.isAuthor(rant.id); } catch (e) {}
+      var canDelete = RantStore.isAdmin() || isAuthor;
+      if (canDelete) {
+        var footerEl = card.querySelector('.rant-card__footer');
+        if (footerEl) {
+          var delBtn = document.createElement('button');
+          delBtn.className = 'rant-delete-btn';
+          delBtn.setAttribute('aria-label', '删除吐槽');
+          delBtn.textContent = '🗑️';
+          delBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            window._feedDelete(rant.id, rant.title);
+          });
+          footerEl.insertBefore(delBtn, footerEl.firstChild);
+        }
+      }
+    }
+
+    // 表情计数
     renderReactionBadges(card, rant.id);
     return card;
   };
